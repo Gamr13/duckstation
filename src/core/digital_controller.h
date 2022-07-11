@@ -28,26 +28,19 @@ public:
     Count
   };
 
-  DigitalController();
+  static const Controller::ControllerInfo INFO;
+
+  DigitalController(u32 index);
   ~DigitalController() override;
 
-  static std::unique_ptr<DigitalController> Create();
-  static std::optional<s32> StaticGetAxisCodeByName(std::string_view button_name);
-  static std::optional<s32> StaticGetButtonCodeByName(std::string_view button_name);
-  static AxisList StaticGetAxisNames();
-  static ButtonList StaticGetButtonNames();
-  static u32 StaticGetVibrationMotorCount();
-  static SettingList StaticGetSettings();
+  static std::unique_ptr<DigitalController> Create(u32 index);
 
   ControllerType GetType() const override;
-  std::optional<s32> GetAxisCodeByName(std::string_view axis_name) const override;
-  std::optional<s32> GetButtonCodeByName(std::string_view button_name) const override;
 
   void Reset() override;
   bool DoState(StateWrapper& sw, bool apply_input_state) override;
 
-  bool GetButtonState(s32 button_code) const override;
-  void SetButtonState(s32 button_code, bool pressed) override;
+  void SetBindState(u32 index, float value) override;
   u32 GetButtonStateBits() const override;
 
   void ResetTransferState() override;
@@ -55,7 +48,7 @@ public:
 
   void SetButtonState(Button button, bool pressed);
 
-  void LoadSettings(const char* section) override;
+  void LoadSettings(SettingsInterface& si, const char* section) override;
 
 private:
   enum class TransferState : u8

@@ -1,15 +1,10 @@
 #include "input_overlay_ui.h"
-#include "common_host_interface.h"
-#include "core/imgui_fullscreen.h"
+#include "common_host.h"
+#include "imgui_fullscreen.h"
 #include "core/pad.h"
 #include "core/settings.h"
 #include "core/system.h"
 #include "fullscreen_ui.h"
-
-static CommonHostInterface* GetHostInterface()
-{
-  return static_cast<CommonHostInterface*>(g_host_interface);
-}
 
 namespace FrontendCommon {
 
@@ -24,6 +19,7 @@ void InputOverlayUI::Draw()
   if (m_active_ports == 0)
     return;
 
+#if 0
   ImFont* font;
   float margin, spacing, shadow_offset;
 
@@ -91,6 +87,7 @@ void InputOverlayUI::Draw()
 
     current_y += font->FontSize + spacing;
   }
+#endif
 }
 
 void InputOverlayUI::UpdateNames()
@@ -99,6 +96,7 @@ void InputOverlayUI::UpdateNames()
   if (!System::IsValid())
     return;
 
+#if 0
   for (u32 port = 0; port < NUM_CONTROLLER_AND_CARD_PORTS; port++)
   {
     const Controller* controller = g_pad.GetController(port);
@@ -113,6 +111,7 @@ void InputOverlayUI::UpdateNames()
     m_button_names[port] = Controller::GetButtonNames(type);
     m_types[port] = type;
   }
+#endif
 }
 
 } // namespace FrontendCommon

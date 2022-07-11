@@ -1,7 +1,10 @@
 #include "save_state_selector_ui.h"
 #include "common/log.h"
 #include "common/string_util.h"
+#include "core/achievements.h"
+#include "core/host.h"
 #include "core/host_display.h"
+#include "core/host_settings.h"
 #include "core/system.h"
 #include "fmt/chrono.h"
 #include "fmt/format.h"
@@ -11,7 +14,7 @@ Log_SetChannel(SaveStateSelectorUI);
 
 namespace FrontendCommon {
 
-SaveStateSelectorUI::SaveStateSelectorUI(CommonHostInterface* host_interface) : m_host_interface(host_interface) {}
+SaveStateSelectorUI::SaveStateSelectorUI() = default;
 
 SaveStateSelectorUI::~SaveStateSelectorUI() = default;
 
@@ -46,12 +49,12 @@ void SaveStateSelectorUI::RefreshList()
 {
   ClearList();
 
+#if 0
   if (!System::GetRunningCode().empty())
   {
-    for (s32 i = 1; i <= CommonHostInterface::PER_GAME_SAVE_STATE_SLOTS; i++)
+    for (s32 i = 1; i <= System::PER_GAME_SAVE_STATE_SLOTS; i++)
     {
-      std::optional<CommonHostInterface::ExtendedSaveStateInfo> ssi =
-        m_host_interface->GetExtendedSaveStateInfo(System::GetRunningCode().c_str(), i);
+      std::optional<ExtendedSaveStateInfo> ssi = System::GetExtendedSaveStateInfo(System::GetRunningCode().c_str(), i);
 
       ListEntry li;
       if (ssi)
@@ -63,10 +66,9 @@ void SaveStateSelectorUI::RefreshList()
     }
   }
 
-  for (s32 i = 1; i <= CommonHostInterface::GLOBAL_SAVE_STATE_SLOTS; i++)
+  for (s32 i = 1; i <= System::GLOBAL_SAVE_STATE_SLOTS; i++)
   {
-    std::optional<CommonHostInterface::ExtendedSaveStateInfo> ssi =
-      m_host_interface->GetExtendedSaveStateInfo(nullptr, i);
+    std::optional<ExtendedSaveStateInfo> ssi = System::GetExtendedSaveStateInfo(nullptr, i);
 
     ListEntry li;
     if (ssi)
@@ -76,6 +78,7 @@ void SaveStateSelectorUI::RefreshList()
 
     m_slots.push_back(std::move(li));
   }
+#endif
 
   if (m_slots.empty() || m_current_selection >= m_slots.size())
     m_current_selection = 0;
@@ -97,14 +100,14 @@ void SaveStateSelectorUI::RefreshHotkeyLegend()
                                            static_cast<int>(caption.size()), caption.data());
   };
 
-  m_load_legend = format_legend_entry(m_host_interface->GetStringSettingValue("Hotkeys", "LoadSelectedSaveState"),
-                                      m_host_interface->TranslateStdString("SaveStateSelectorUI", "Load"));
-  m_save_legend = format_legend_entry(m_host_interface->GetStringSettingValue("Hotkeys", "SaveSelectedSaveState"),
-                                      m_host_interface->TranslateStdString("SaveStateSelectorUI", "Save"));
-  m_prev_legend = format_legend_entry(m_host_interface->GetStringSettingValue("Hotkeys", "SelectPreviousSaveStateSlot"),
-                                      m_host_interface->TranslateStdString("SaveStateSelectorUI", "Select Previous"));
-  m_next_legend = format_legend_entry(m_host_interface->GetStringSettingValue("Hotkeys", "SelectNextSaveStateSlot"),
-                                      m_host_interface->TranslateStdString("SaveStateSelectorUI", "Select Next"));
+  m_load_legend = format_legend_entry(Host::GetStringSettingValue("Hotkeys", "LoadSelectedSaveState"),
+                                      Host::TranslateStdString("SaveStateSelectorUI", "Load"));
+  m_save_legend = format_legend_entry(Host::GetStringSettingValue("Hotkeys", "SaveSelectedSaveState"),
+                                      Host::TranslateStdString("SaveStateSelectorUI", "Save"));
+  m_prev_legend = format_legend_entry(Host::GetStringSettingValue("Hotkeys", "SelectPreviousSaveStateSlot"),
+                                      Host::TranslateStdString("SaveStateSelectorUI", "Select Previous"));
+  m_next_legend = format_legend_entry(Host::GetStringSettingValue("Hotkeys", "SelectNextSaveStateSlot"),
+                                      Host::TranslateStdString("SaveStateSelectorUI", "Select Next"));
 }
 
 const char* SaveStateSelectorUI::GetSelectedStatePath() const
@@ -142,10 +145,11 @@ void SaveStateSelectorUI::SelectPreviousSlot()
     (m_current_selection == 0) ? (static_cast<u32>(m_slots.size()) - 1u) : (m_current_selection - 1);
 }
 
-void SaveStateSelectorUI::InitializeListEntry(ListEntry* li, CommonHostInterface::ExtendedSaveStateInfo* ssi)
+void SaveStateSelectorUI::InitializeListEntry(ListEntry* li, ExtendedSaveStateInfo* ssi)
 {
   li->title = std::move(ssi->title);
   li->game_code = std::move(ssi->game_code);
+#if 0
   li->path = std::move(ssi->path);
   li->formatted_timestamp = fmt::format("{:%c}", fmt::localtime(ssi->timestamp));
   li->slot = ssi->slot;
@@ -154,43 +158,44 @@ void SaveStateSelectorUI::InitializeListEntry(ListEntry* li, CommonHostInterface
   li->preview_texture.reset();
   if (ssi && !ssi->screenshot_data.empty())
   {
-    li->preview_texture = m_host_interface->GetDisplay()->CreateTexture(
+    li->preview_texture = Host::GetHostDisplay()->CreateTexture(
       ssi->screenshot_width, ssi->screenshot_height, 1, 1, 1, HostDisplayPixelFormat::RGBA8,
       ssi->screenshot_data.data(), sizeof(u32) * ssi->screenshot_width, false);
   }
   else
   {
-    li->preview_texture = m_host_interface->GetDisplay()->CreateTexture(
-      PLACEHOLDER_ICON_WIDTH, PLACEHOLDER_ICON_HEIGHT, 1, 1, 1, HostDisplayPixelFormat::RGBA8, PLACEHOLDER_ICON_DATA,
-      sizeof(u32) * PLACEHOLDER_ICON_WIDTH, false);
+    li->preview_texture = Host::GetHostDisplay()->CreateTexture(PLACEHOLDER_ICON_WIDTH, PLACEHOLDER_ICON_HEIGHT, 1, 1,
+                                                                1, HostDisplayPixelFormat::RGBA8, PLACEHOLDER_ICON_DATA,
+                                                                sizeof(u32) * PLACEHOLDER_ICON_WIDTH, false);
   }
 
   if (!li->preview_texture)
     Log_ErrorPrintf("Failed to upload save state image to GPU");
+#endif
 }
 
 std::pair<s32, bool> SaveStateSelectorUI::GetSlotTypeFromSelection(u32 selection) const
 {
-  if (selection < CommonHostInterface::PER_GAME_SAVE_STATE_SLOTS)
+  if (selection < System::PER_GAME_SAVE_STATE_SLOTS)
   {
     return {selection + 1, false};
   }
 
-  return {selection - CommonHostInterface::PER_GAME_SAVE_STATE_SLOTS + 1, true};
+  return {selection - System::PER_GAME_SAVE_STATE_SLOTS + 1, true};
 }
 
 void SaveStateSelectorUI::InitializePlaceholderListEntry(ListEntry* li, s32 slot, bool global)
 {
-  li->title = m_host_interface->TranslateStdString("SaveStateSelectorUI", "No Save State");
+  li->title = Host::TranslateStdString("SaveStateSelectorUI", "No Save State");
   std::string().swap(li->game_code);
   std::string().swap(li->path);
   std::string().swap(li->formatted_timestamp);
   li->slot = slot;
   li->global = global;
 
-  li->preview_texture = m_host_interface->GetDisplay()->CreateTexture(
-    PLACEHOLDER_ICON_WIDTH, PLACEHOLDER_ICON_HEIGHT, 1, 1, 1, HostDisplayPixelFormat::RGBA8, PLACEHOLDER_ICON_DATA,
-    sizeof(u32) * PLACEHOLDER_ICON_WIDTH, false);
+  li->preview_texture = g_host_display->CreateTexture(PLACEHOLDER_ICON_WIDTH, PLACEHOLDER_ICON_HEIGHT, 1, 1, 1,
+                                                              HostDisplayPixelFormat::RGBA8, PLACEHOLDER_ICON_DATA,
+                                                              sizeof(u32) * PLACEHOLDER_ICON_WIDTH, false);
 
   if (!li->preview_texture)
     Log_ErrorPrintf("Failed to upload save state image to GPU");
@@ -252,16 +257,15 @@ void SaveStateSelectorUI::Draw()
 
         if (entry.global)
         {
-          ImGui::Text(m_host_interface->TranslateString("SaveStateSelectorUI", "Global Slot %d"), entry.slot);
+          ImGui::Text(Host::TranslateString("SaveStateSelectorUI", "Global Slot %d"), entry.slot);
         }
         else if (entry.game_code.empty())
         {
-          ImGui::Text(m_host_interface->TranslateString("SaveStateSelectorUI", "Game Slot %d"), entry.slot);
+          ImGui::Text(Host::TranslateString("SaveStateSelectorUI", "Game Slot %d"), entry.slot);
         }
         else
         {
-          ImGui::Text(m_host_interface->TranslateString("SaveStateSelectorUI", "%s Slot %d"), entry.game_code.c_str(),
-                      entry.slot);
+          ImGui::Text(Host::TranslateString("SaveStateSelectorUI", "%s Slot %d"), entry.game_code.c_str(), entry.slot);
         }
         ImGui::TextUnformatted(entry.title.c_str());
         ImGui::TextUnformatted(entry.formatted_timestamp.c_str());
@@ -279,7 +283,7 @@ void SaveStateSelectorUI::Draw()
       ImGui::SetCursorPosX(padding);
       ImGui::BeginTable("table", 2);
 
-      const bool hide_load_button = m_host_interface->IsCheevosChallengeModeActive();
+      const bool hide_load_button = Achievements::IsChallengeModeActive();
       ImGui::TableNextColumn();
       ImGui::TextUnformatted(!hide_load_button ? m_load_legend.c_str() : m_save_legend.c_str());
       ImGui::TableNextColumn();
@@ -309,14 +313,14 @@ void SaveStateSelectorUI::Draw()
 void SaveStateSelectorUI::LoadCurrentSlot()
 {
   const auto slot_info = GetSlotTypeFromSelection(m_current_selection);
-  m_host_interface->LoadState(slot_info.second, slot_info.first);
+  //System::LoadStateFromSlot(slot_info.second, slot_info.first);
   Close();
 }
 
 void SaveStateSelectorUI::SaveCurrentSlot()
 {
   const auto slot_info = GetSlotTypeFromSelection(m_current_selection);
-  m_host_interface->SaveState(slot_info.second, slot_info.first);
+  //System::SaveStateToSlot(slot_info.second, slot_info.first);
   Close();
 }
 
